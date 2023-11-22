@@ -1,0 +1,12 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/pytorch/CIFAR10/data
+
+/pytorch/ImageNet/data
+
+/pytorch/mnist/data
+
+/pytorch/RNN/data
+
+/GNN/data
