@@ -36,21 +36,7 @@ L-DiffRec 将项目聚类成组，通过组特定的VAE将每个组上的交互�
 T-DiffRec 通过简单而有效的时间感知重新加权策略对交互序列进行建模。直观上，用户后来的交互被分配更大的权重，然后输入 DiffRec 进行训练和推理。
 
 
-
-## DiffRec Training
-
-![](image1.png)
-
-the prior matching term被忽略，因为是一个常数
-
-reconstruction term表示从t状态重建t-1状态的概率
-
-因此优化取决于最大化重建项和噪声匹配项
-
-
-
-
-## Diffusion
+## 插入Diffusion
 
 ![](diffusion.png)
 
@@ -102,3 +88,95 @@ $$
 
 ![](./backforward.png)
 
+
+## 回到DiffRec
+
+### Traning ... loss
+
+DiffRec基本沿用Duffusion结构
+
+![](./diffrec.png)
+
+在一个标准的DiffRec结构中完整的损失函数如上，但是在实际的训练中prior matching term被省略。
+
+![](image1.png)
+
+DiffRec被用于个性化推荐，将用户交互矩阵送进去进行加噪和扩散生成，在论文中需要构造两个损失函数，其一为reconstruction term，其二为denoising matching term
+
+其中第二个损失主要用于从 t 时刻去噪生成 t-1 时刻的数据。最后整合的数据如下:
+
+
+![](./Lt.png)
+
+如上述公式中，X_seta 是模型预测出来的结果，表示 t 时刻的值， 和 x_0 进行了MSE，前置项是一个SNR。
+
+在论文中的说法是使用和Multi-VAE相同的策略使用MLP预测 x_seta(x_t, t) （其实就是x_0）,然后和实际的x_0进行MSE
+
+```python
+# 优化出一个x_0和noise
+model_output = model(x_t, ts)
+
+# 记录x_0和noise
+target = {
+    ModelMeanType.START_X: x_start,
+    ModelMeanType.EPSILON: noise,
+}[self.mean_type]
+
+assert model_output.shape == target.shape == x_start.shape
+
+# 均方误差
+mse = mean_flat((target - model_output) ** 2)
+```
+
+之后单独计算SNR（即t-1时刻的alpha和t时刻的1-alpha的比值），最后相乘得到L_t
+
+```python
+weight = self.SNR(ts - 1) - self.SNR(ts)
+# weight值，将t时刻为0的值修改为1.0
+weight = th.where((ts == 0), 1.0, weight)
+loss = mse
+
+# L_t损失
+terms["loss"] = weight * loss
+```
+
+之后还需要计算reconstruction term，原则上总损失应该为：
+
+$$
+L_1 = -E_{q(x_1|x_0}{[\log{p_{\theta}(x_0|x_1)}]}
+$$
+
+总损失为
+
+$$
+L = -L1 - \sum^{T}_{t=2}L_t
+$$
+
+但是形式上，reconstruction term等同于计算denoising matching term的第一步，不同是缺少了权重（SNR部分，因为此时没有 t-1 时刻），因此可以通过最小化
+
+$$
+\sum^T_{t=1}L_t
+$$
+
+来优化模型的参数，所以在实际实现中，作者通过均匀采样步骤 t 来优化期望 L(x_0, theta)
+
+$$
+L(X_0, \theta) = E_{t - u(1, T)}L_t
+$$
+
+> 与传统的Diffusion优先区别的是：传统diffusion训练的是noise，也就是预测噪声（epsilon），而DiffRec中预测的是x_0，也就是喂进去的交互图。
+> 1. 预测的目标是预测item rank，所以 x_0-ELBO 更加符合直觉(符合任务需要)
+> 2. 随机采样 epsilon ~ N(0,1) 是不稳定的，会增加训练MLP的风险
+
+
+### L-Diffusion
+
+Diffusion的变体，因为Multi-VAE和DiffRec等生成模型在预测的时候需要同时生成所有items的交互概率x_0，需要消耗大量的资源。所以L-Diffusion先通过VAE对items进行聚类以便压缩维度，并在latent space中进行扩散。
+
+![](./L-DiffRec.png)
+
+L-DiffRec先通过k-means将items聚类为C类别(基于lightGCN预训练物品的item嵌入表示)。其余基本没太大变化
+
+### 详细参考
+
+```https://blog.csdn.net/Blueghost19/article/details/130215990```
