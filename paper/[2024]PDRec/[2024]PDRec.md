@@ -26,3 +26,13 @@
     ***可以提出一个新的解决思路？使用plug-in diffusion model去提取广义的用户偏好，然后使用港大的思路集合上下文（BERT）和HBR生成私有用户的个人偏好，结合（cat）之后进行CL training***
 
 
+![](figure1.png)
+
+PDRec的前向加噪本质上还是一个马尔可夫链，还没看代码，但是应该也可以抽象为:
+
+$$
+x_t = \sqrt{\alpha}x_0 + \sqrt{1-\alpha}\theta
+$$
+
+插件Diffusion中先把数据根据时间信息进行整理，然后作为新的x_0送到diffusion中进行扩散训练，输出的高阶数据再融合HBR等，输出用于SR Model。
+

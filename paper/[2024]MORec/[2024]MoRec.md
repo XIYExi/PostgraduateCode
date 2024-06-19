@@ -1,4 +1,4 @@
-# [2024]MoRec
+# [2024] MoRec
 
 > Multi-Objective Recommendation via Multivariate Policy Learning (ShareChat)
 
