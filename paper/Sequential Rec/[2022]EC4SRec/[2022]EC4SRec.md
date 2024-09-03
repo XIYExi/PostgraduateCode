@@ -16,7 +16,7 @@ Explanation Guided Augmentations (EGA) and Explanation Guided Contrastive Learni
 for acc result -> learn a high-quality user representation from user's historical seq which match the user representation against candidate items.
 
 
-![](./figure1.png)
+![](figure1.png)
 
 如上图中（a）序列中有当前用户的7个交互items，下一个交互是红色的吹风机；（b）是给定序列通过随机掩码生成的两个正视图和另一个user的负视图
 

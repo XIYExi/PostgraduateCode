@@ -10,7 +10,7 @@
 2. these methods always model singleway transitions between consecutive items and neglect the transitions among the contexts
 
 
-![](./figure1.png)
+![](figure1.png)
 
 
 ## Introduction
@@ -56,12 +56,12 @@ vector y中的每一value为对应可能item的得分，y中的top-K将会用于
 
 ### *Learning Item Embeddings on Session Graphs*
 
-![](./session-gnn.png)
+![](session-gnn.png)
 
 To be specific, we can concatenate features with node vector to deal with such information.事实上在2019年的SR-GNN中就提出了可以扩展item embedding的思路。
 
 
-![](./matrix.png)
+![](matrix.png)
 
 ###  *Generating Session Embeddings*
 

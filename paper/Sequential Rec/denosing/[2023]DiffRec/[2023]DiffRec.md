@@ -26,7 +26,7 @@ use an encoder to approximate the posterior distribution over latent factors and
 但 VAE 却面临着易处理性和表示能力之间的权衡问题。易于处理且简单的编码器可能无法很好地捕获异质用户偏好，而复杂模型的后验分布可能很棘手
 
 
-![](./figure-1.png)
+![](figure-1.png)
 
 
 DiffRec 通过在前向过程中注入预定的高斯噪声来逐渐破坏用户的交互历史，然后通过参数化神经网络迭代地从损坏的交互中恢复原始交互。
@@ -86,7 +86,7 @@ $$
 
 逆过程是从高斯噪声中恢复原本的数据，可以假设他也是一个高斯分布，但是无法逐步拟合分布，所以需要构建一个参数分布去做估计。**逆过程仍然是一个马尔科夫链**。
 
-![](./backforward.png)
+![](backforward.png)
 
 
 ## 回到DiffRec
@@ -95,7 +95,7 @@ $$
 
 DiffRec基本沿用Duffusion结构
 
-![](./diffrec.png)
+![](diffrec.png)
 
 在一个标准的DiffRec结构中完整的损失函数如上，但是在实际的训练中prior matching term被省略。
 
@@ -106,7 +106,7 @@ DiffRec被用于个性化推荐，将用户交互矩阵送进去进行加噪和�
 其中第二个损失主要用于从 t 时刻去噪生成 t-1 时刻的数据。最后整合的数据如下:
 
 
-![](./Lt.png)
+![](Lt.png)
 
 如上述公式中，X_seta 是模型预测出来的结果，表示 t 时刻的值， 和 x_0 进行了MSE，前置项是一个SNR。
 
@@ -173,7 +173,7 @@ $$
 
 Diffusion的变体，因为Multi-VAE和DiffRec等生成模型在预测的时候需要同时生成所有items的交互概率x_0，需要消耗大量的资源。所以L-Diffusion先通过VAE对items进行聚类以便压缩维度，并在latent space中进行扩散。
 
-![](./L-DiffRec.png)
+![](L-DiffRec.png)
 
 L-DiffRec先通过k-means将items聚类为C类别(基于lightGCN预训练物品的item嵌入表示)。其余基本没太大变化
 

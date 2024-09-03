@@ -54,11 +54,11 @@ p(v^i_{|s^i_A|+1} = v|s^i_A, info(S_B))
 $$
 
 
-![](./figure1.png)
+![](figure1.png)
 
 在单域中的User标识, The autoencoder in our framework consists of an embedding module, an encoder module, and a decoder module.
 
-![](./autoencoder.png)
+![](autoencoder.png)
 
 其中h表示item v在 t位置的潜在表示，e是item embedding 和 position embedding的组合
 
@@ -80,7 +80,7 @@ $$
 ## Cross-domain Rec
 
 
-![](./alo.png)
+![](alo.png)
 
 对于指定domain A中的特定user ui，我们计算时间戳 t 的bpr损失：
 

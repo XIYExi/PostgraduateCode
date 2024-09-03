@@ -2,7 +2,7 @@
 
 > Towards Universal Sequence Representation Learning for Recommender Systems(人大-高岭人工智能学院)
 
-![](./figure1.png)
+![](figure1.png)
 
 UniSRec使用ItemID和文本替代itemID
 
@@ -97,4 +97,4 @@ $$
 
 It shows that our approach can capture universal sequential patterns across platforms in terms of general textual semantics.
 
-![](./cross-platform.png)
+![](cross-platform.png)
