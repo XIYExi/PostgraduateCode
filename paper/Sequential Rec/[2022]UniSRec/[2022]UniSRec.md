@@ -2,6 +2,8 @@
 
 > Towards Universal Sequence Representation Learning for Recommender Systems(人大-高岭人工智能学院)
 
+代码：https://github.com/RUCAIBox/UniSRec
+
 ![](figure1.png)
 
 UniSRec使用ItemID和文本替代itemID

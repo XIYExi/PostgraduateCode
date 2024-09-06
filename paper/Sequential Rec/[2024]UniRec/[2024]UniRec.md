@@ -2,6 +2,7 @@
 
 > UniRec: A Dual Enhancement of Uniformity and Frequency in Sequential Recommendations(复旦)
 
+代码：https://github.com/Linxi000/UniRec
 
 **很有意思的思路**
 
