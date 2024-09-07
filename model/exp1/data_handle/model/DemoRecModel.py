@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-from model.modules import LayerNorm
+from model.modules import Encoder, LayerNorm, XNetLoss, XNetLossCrossView,  InfoNCE_Linear
 
 
 def extract(v, t, x_shape):
@@ -21,7 +21,7 @@ class DemoRecModel(nn.Module):
                  T, hidden_size, item_size,
                  max_seq_length=20, num_attention_heads=2,
                  attention_probs_dropout_prob=0.2, hidden_act='gelu', hidden_dropout_prob=0.0,
-                 linear_infonce=False, initializer_range=0.02
+                 linear_infonce=False, initializer_range=0.02, num_hidden_layers=1
                  ):
         super(DemoRecModel, self).__init__()
         self.item_size = item_size
@@ -89,6 +89,15 @@ class DemoRecModel(nn.Module):
                 (1.0 - self.alphas_cumprod_prev) * torch.sqrt(self.alphas) / (1.0 - self.alphas_cumprod)
         ).to(self.device)
 
+        self.conditional_encoder = Encoder(
+            hidden_size=hidden_size,
+            num_attention_heads=num_attention_heads,
+            attention_probs_dropout_prob=attention_probs_dropout_prob,
+            hidden_dropout_prob=hidden_dropout_prob,
+            hidden_act=hidden_act,
+            num_hidden_layers=num_hidden_layers
+        )
+
 
     def init_weights(self, module):
         """
@@ -102,5 +111,70 @@ class DemoRecModel(nn.Module):
         if isinstance(module, nn.Linear) and module.bias is not None:
             module.bias.data.zero_()
 
-    def forward(self, input_ids, target_pos, target_neg, aug_input_ids, epoch):
-        pass
+
+    def add_position_embedding(self, input_ids, frequency_items_mask):
+        # 不动原始序列，copy一份seq用来处理 positional 信息
+        sequence = input_ids  # (128, 25)
+        # (128, 25) 有数据的位置为1， 其他位置为0
+        attention_mask = (input_ids > 0).long()
+
+        # 融合 items 频率信息
+        attention_frequency_mask = torch.zeros_like(attention_mask, dtype=torch.long)
+        for i in range(frequency_items_mask.size(0)):
+            for j in range(frequency_items_mask.size(1)):
+                if frequency_items_mask[i, j].item() == 0:
+                    attention_frequency_mask[i, j] = 1
+
+        assert attention_mask.shape == frequency_items_mask.shape == attention_frequency_mask.shape
+
+        extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)  # torch.int64 (128, 1, 1, 25)
+        max_len = attention_mask.size(-1)  # 25
+        attn_shape = (1, max_len, max_len)  # (1, 25, 25) 注意力机制上三角掩码
+
+        subsequent_mask = torch.triu(torch.ones(attn_shape), diagonal=1)  # 上三角mask，对角线都是0
+        subsequent_mask = (subsequent_mask == 0).unsqueeze(1)
+        subsequent_mask = subsequent_mask.long()
+
+        # 确保生成的seq只依赖左侧的数据，保证model不会作弊
+        if self.args.cuda_condition:
+            subsequent_mask = subsequent_mask.cuda()
+
+        # (128, 1, 25, 25)
+        extended_attention_mask = extended_attention_mask * subsequent_mask
+        extended_attention_mask = extended_attention_mask.to(dtype=next(self.parameters()).dtype)
+        extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
+
+
+
+        # 仿照 position emb 处理方法，同样处理一份frequency emb
+        extended_frequency_attention_mask = attention_frequency_mask.unsqueeze(1).unsqueeze(2)
+        attn_frequency_shape = (1, max_len, max_len)
+        subsequent_fre_mask = torch.triu(torch.ones(attn_frequency_shape), diagonal=1)
+        subsequent_fre_mask = (subsequent_fre_mask == 0).unsqueeze(1)
+        subsequent_fre_mask = subsequent_fre_mask.long()
+        if self.args.cuda_condition:
+            subsequent_fre_mask = subsequent_fre_mask.cuda()
+        extended_frequency_attention_mask = extended_frequency_attention_mask * subsequent_fre_mask
+        extended_frequency_attention_mask = extended_frequency_attention_mask.to(dtype=next(self.parameters()).dtype)
+        extended_frequency_attention_mask = (1.0 - extended_frequency_attention_mask) * -10000.0
+
+        seq_length = sequence.size(1)
+
+        position_ids = torch.arange(seq_length, dtype=torch.long, device=sequence.device)
+        position_ids = position_ids.unsqueeze(0).expand_as(sequence)  # (128, 20)
+        item_embeddings = self.item_embeddings(sequence)              # (128, 20, 128)
+        position_embeddings = self.position_embeddings(position_ids)  # (128, 20, 128)
+        sequence_emb = item_embeddings + position_embeddings          # (128, 20, 128)
+        sequence_emb = self.LayerNorm(sequence_emb)
+        sequence_emb = self.dropout(sequence_emb)
+
+        return sequence_emb, extended_attention_mask
+
+
+
+    def forward(self, input_ids, target_pos, target_neg, aug_input_ids, epoch, frequency_items_mask):
+        # 添加 positional embedding
+        input_emb, extended_attention_mask = self.add_position_embedding(input_ids=input_ids, frequency_items_mask=frequency_items_mask)
+        aug_input_emb, aug_extended_attention_mask = self.add_position_embedding(aug_input_ids, frequency_items_mask)
+
+        conditional_emb = self.conditional_encoder(input_emb, extended_attention_mask, output_all_encoded_layers=True)[-1]
