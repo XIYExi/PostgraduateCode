@@ -2,6 +2,8 @@
 
 > Collaborative Reflection-Augmented Autoencoder Network for Recommender Systems(华南科技，港大)
 
+代码：https://github.com/akaxlh/CRANet
+
 
 ![alt text](image.png)
 
@@ -94,6 +96,8 @@ $$
 L_{reg} = \lambda_3·||T-V·V^T||^2_F
 $$
 
+![alt text](image-3.png)
 
-![alt text](image-1.png)
+![alt text](image-2.png)
+
 
