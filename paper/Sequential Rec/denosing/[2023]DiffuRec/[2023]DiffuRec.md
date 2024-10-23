@@ -44,8 +44,23 @@ $$
 
 
 
-## 近似模型
+## 10.13补充
 
+
+使用static item embedding ```ej``` 作为在latent space中的semantic encoding。
+
+模型在diff过程中通过从history交互序列S中恢复target item，通过diff forward过程向target item embedding中添加noise。
+
+diffusion过程中，noising之后的target item representation是xs，注入噪声可以帮助diffu获得多个潜在方面的表示，从而利用target item的指导作为辅助语义信号。生成的样本为Z，最后再通过近似器去噪获得预测出来的x0，让后计算损失，让x0和target item embedding接近。
+
+
+模型使用Transformer作为近似器
+
+![alt text](image-1.png)
+
+
+
+主要是diffusion的反向和推理过程中，每一步都依赖x0，而这个x0就是我们在diffu过程中通过训练Transformer训练出来的，通过训练好的模型直接预测出x0，然后再反向过程中计算xt-1.
 
 
 
